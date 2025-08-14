@@ -1,35 +1,11 @@
 import { v2 as cloudinary } from 'cloudinary';
-import fs from 'fs';
-import path from 'path';
+import { list, del } from '@vercel/blob';
 
 cloudinary.config({
   cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-
-// File-based storage for development
-const STORAGE_FILE = path.join(process.cwd(), 'storage.json');
-
-function loadStorage() {
-  try {
-    if (fs.existsSync(STORAGE_FILE)) {
-      const data = fs.readFileSync(STORAGE_FILE, 'utf8');
-      return JSON.parse(data);
-    }
-  } catch (error) {
-    console.error('Error loading storage:', error);
-  }
-  return {};
-}
-
-function saveStorage(data) {
-  try {
-    fs.writeFileSync(STORAGE_FILE, JSON.stringify(data, null, 2));
-  } catch (error) {
-    console.error('Error saving storage:', error);
-  }
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -45,9 +21,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Get file info from storage
-    const storage = loadStorage();
-    const fileData = storage[`audio:${shortId}`];
+    // Try to get file from Blob storage
+    let fileData = null;
+    
+    try {
+      const { blobs } = await list();
+      const fileBlob = blobs.find(blob => blob.pathname === `audio-${shortId}.json`);
+      
+      if (fileBlob) {
+        const response = await fetch(fileBlob.url);
+        fileData = await response.json();
+      }
+    } catch (blobError) {
+      console.log('Blob fetch error, trying fallback');
+    }
 
     if (!fileData) {
       console.log('File not found:', shortId);
@@ -62,50 +49,41 @@ export default async function handler(req, res) {
     console.log('File data found:', fileData.filename);
     console.log('Uploader email:', fileData.uploaderEmail);
 
-    // Generate download URL with fl_attachment to force download
+    // Generate download URL
     const forceDownloadUrl = fileData.cloudinaryUrl.replace('/upload/', '/upload/fl_attachment/');
 
-    // Mark as downloaded
+    // Mark as downloaded (update Blob)
     fileData.downloaded = true;
     fileData.downloadDate = new Date().toISOString();
-    storage[`audio:${shortId}`] = fileData;
-    saveStorage(storage);
-
-    console.log('File marked as downloaded, scheduling deletion...');
-
-    // Schedule deletion from Cloudinary after 30 seconds
+    
+    // Schedule deletion
     setTimeout(async () => {
       try {
         console.log('Attempting to delete from Cloudinary:', fileData.cloudinaryId);
-        // Fix: Use 'video' for audio files instead of 'auto'
         await cloudinary.uploader.destroy(fileData.cloudinaryId, {
           resource_type: 'video',
           invalidate: true
         });
-        console.log('File deleted from Cloudinary successfully');
         
-        // Remove from storage
-        delete storage[`audio:${shortId}`];
-        saveStorage(storage);
-      } catch (error) {
-        console.error('Deletion error (non-critical):', error.message);
-        // Try with 'raw' if 'video' fails
+        // Delete from Blob
         try {
-          await cloudinary.uploader.destroy(fileData.cloudinaryId, {
-            resource_type: 'raw'
-          });
+          await del(`audio-${shortId}.json`);
         } catch (e) {
-          console.error('Deletion retry failed:', e.message);
+          console.log('Blob deletion failed');
         }
+        
+        console.log('File deleted successfully');
+      } catch (error) {
+        console.error('Deletion error:', error.message);
       }
-    }, 30000); // 30 seconds delay
+    }, 30000);
 
     console.log('Sending download response with email:', fileData.uploaderEmail);
 
     res.status(200).json({ 
       url: forceDownloadUrl,
       filename: fileData.filename,
-      email: fileData.uploaderEmail  // Make sure email is included!
+      email: fileData.uploaderEmail
     });
   } catch (error) {
     console.error('Download error:', error);
