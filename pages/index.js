@@ -1,357 +1,317 @@
-<!DOCTYPE html>
-<html>
-<head>
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+import { useState } from 'react';
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-  background: linear-gradient(135deg, #F5F5F5 0%, #E0E0E0 100%);
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-}
+export default function Home() {
+  const [file, setFile] = useState(null);
+  const [email, setEmail] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [shareLink, setShareLink] = useState('');
+  const [error, setError] = useState('');
+  const [showTermsPreview, setShowTermsPreview] = useState(false);
 
-.container {
-  background: white;
-  border-radius: 20px;
-  padding: 48px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-  max-width: 680px;
-  width: 100%;
-}
+  const handleFileSelect = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile && selectedFile.type.startsWith('audio/')) {
+      if (selectedFile.size > 100 * 1024 * 1024) {
+        setError('File too large. Maximum size is 100MB.');
+        return;
+      }
+      setFile(selectedFile);
+      setError('');
+    } else {
+      setError('Please select an audio file');
+    }
+  };
 
-.logo-section {
-  text-align: center;
-  margin-bottom: 32px;
-  padding-bottom: 28px;
-  border-bottom: 2px solid #E5E5E5;
-}
+  const validateEmail = (email) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
 
-.logo-image {
-  max-width: 280px;
-  height: auto;
-  margin-bottom: 12px;
-}
+  const handleUpload = async () => {
+    if (!file || !email) {
+      setError('Please select a file and enter your email');
+      return;
+    }
 
-.subtitle {
-  color: #6B6B6B;
-  font-size: 15px;
-  letter-spacing: 0.3px;
-}
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
 
-.info-section {
-  background: linear-gradient(135deg, #FDFBF7 0%, #FFF9E6 100%);
-  border: 1px solid #F0E6D2;
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 28px;
-}
+    setUploading(true);
+    setError('');
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('email', email);
 
-.info-section h3 {
-  color: #2C2C2C;
-  font-size: 20px;
-  margin-bottom: 10px;
-  font-weight: 600;
-}
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-.info-section p {
-  color: #6B6B6B;
-  font-size: 14px;
-  margin-bottom: 20px;
-  line-height: 1.6;
-}
+      const data = await response.json();
+      
+      if (data.success) {
+        const link = `${window.location.origin}/a/${data.code}`;
+        setShareLink(link);
+      } else {
+        setError('Upload failed. Please try again.');
+      }
+    } catch (error) {
+      setError('Upload failed. Please try again.');
+      console.error(error);
+    }
+    setUploading(false);
+  };
 
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(shareLink);
+    alert('Link copied to clipboard!');
+  };
 
-.feature {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
-  background: white;
-  border-radius: 8px;
-}
+  const resetForm = () => {
+    setFile(null);
+    setEmail('');
+    setShareLink('');
+    setError('');
+    setShowTermsPreview(false);
+  };
 
-.feature-icon {
-  font-size: 24px;
-}
-
-.feature-text {
-  font-size: 14px;
-  color: #2C2C2C;
-  font-weight: 500;
-}
-
-.terms-preview-section {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.terms-preview-btn {
-  background: transparent;
-  color: #B8941F;
-  border: 2px solid #D4AF37;
-  padding: 10px 20px;
-  border-radius: 25px;
-  font-size: 14px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.terms-preview-btn:hover {
-  background: linear-gradient(135deg, #D4AF37 0%, #B8941F 100%);
-  color: white;
-}
-
-.upload-box {
-  border: 3px dashed #E5E5E5;
-  border-radius: 16px;
-  padding: 48px 32px;
-  text-align: center;
-  background: #FAFAFA;
-  margin-bottom: 28px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.upload-box:hover {
-  border-color: #D4AF37;
-  background: #FFFEF5;
-}
-
-.email-input {
-  width: 100%;
-  padding: 14px 16px;
-  border: 2px solid #E5E5E5;
-  border-radius: 10px;
-  font-size: 16px;
-  margin-bottom: 20px;
-}
-
-.email-input:focus {
-  outline: none;
-  border-color: #D4AF37;
-}
-
-.upload-btn {
-  width: 100%;
-  background: linear-gradient(135deg, #D4AF37 0%, #B8941F 100%);
-  color: white;
-  border: none;
-  padding: 16px 28px;
-  border-radius: 10px;
-  font-size: 17px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-bottom: 32px;
-}
-
-.upload-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(212, 175, 55, 0.4);
-}
-
-.upload-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.how-it-works {
-  margin-top: 40px;
-  padding-top: 32px;
-  border-top: 2px solid #E5E5E5;
-}
-
-.how-it-works h4 {
-  color: #2C2C2C;
-  font-size: 18px;
-  margin-bottom: 24px;
-  text-align: center;
-  font-weight: 600;
-}
-
-.steps {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-}
-
-.step-number {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #D4AF37 0%, #B8941F 100%);
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 16px;
-}
-
-.step-text {
-  font-size: 13px;
-  color: #6B6B6B;
-  text-align: center;
-  max-width: 100px;
-}
-
-.step-arrow {
-  color: #E5E5E5;
-  font-size: 20px;
-  margin: 0 -10px;
-}
-
-.footer {
-  margin-top: 48px;
-  padding-top: 28px;
-  border-top: 2px solid #E5E5E5;
-  text-align: center;
-}
-
-.powered-by {
-  color: #6B6B6B;
-  font-size: 13px;
-  margin-bottom: 10px;
-}
-
-.footer-links {
-  margin-top: 10px;
-}
-
-.footer-links a {
-  color: #B8941F;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  margin: 0 10px;
-}
-</style>
-</head>
-<body>
-
-<div class="container">
-  <!-- Logo Section -->
-  <div class="logo-section">
-    <img src="/safeshare-logo.png" alt="SafeShare" class="logo-image" />
-    <p class="subtitle">Secure File Sharing with Legal Protection</p>
-  </div>
-
-  <!-- Info Section -->
-  <div class="info-section">
-    <h3>Protect Your Creative Work</h3>
-    <p>
-      Share your audio files securely with automatic legal protection. 
-      Recipients must accept binding terms before downloading.
-    </p>
-    <div class="features-grid">
-      <div class="feature">
-        <div class="feature-icon">🛡️</div>
-        <span class="feature-text">Terms Protected</span>
+  return (
+    <div className="container">
+      {/* Logo Section */}
+      <div className="logo-section">
+        <img src="/safeshare-logo.png" alt="SafeShare" className="logo-image" />
+        <p className="subtitle">Secure File Sharing with Legal Protection</p>
       </div>
-      <div class="feature">
-        <div class="feature-icon">📧</div>
-        <span class="feature-text">Download Alerts</span>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">🗑️</div>
-        <span class="feature-text">Auto-Delete</span>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">🔗</div>
-        <span class="feature-text">Short Links</span>
-      </div>
-    </div>
-  </div>
 
-  <!-- Terms Preview Button -->
-  <div class="terms-preview-section">
-    <button class="terms-preview-btn">👁 View Standard Terms</button>
-  </div>
+      {!shareLink ? (
+        <>
+          {/* Info Section */}
+          <div className="info-section">
+            <h3>Protect Your Creative Work</h3>
+            <p>
+              Share your audio files securely with automatic legal protection. 
+              Recipients must accept binding terms before downloading.
+            </p>
+            <div className="features-grid">
+              <div className="feature">
+                <div className="feature-icon">🛡️</div>
+                <span className="feature-text">Terms Protected</span>
+              </div>
+              <div className="feature">
+                <div className="feature-icon">📧</div>
+                <span className="feature-text">Download Alerts</span>
+              </div>
+              <div className="feature">
+                <div className="feature-icon">🗑️</div>
+                <span className="feature-text">Auto-Delete</span>
+              </div>
+              <div className="feature">
+                <div className="feature-icon">🔗</div>
+                <span className="feature-text">Short Links</span>
+              </div>
+            </div>
+          </div>
 
-  <!-- Upload Section -->
-  <div class="upload-section">
-    <div class="upload-box">
-      <div class="upload-icon" style="font-size: 56px; margin-bottom: 16px;">☁️</div>
-      <div style="font-size: 20px; color: #2C2C2C; font-weight: 600; margin-bottom: 8px;">
-        Drop Your Audio File Here
-      </div>
-      <div style="font-size: 14px; color: #6B6B6B;">
-        or click to browse<br/>
-        <span style="font-size: 12px; color: #7A7A7A;">MP3, WAV, M4A, FLAC (Max 100MB)</span>
-      </div>
-    </div>
+          {/* Terms Preview Button */}
+          <div className="terms-preview-section">
+            <button 
+              className="terms-preview-btn"
+              onClick={() => setShowTermsPreview(!showTermsPreview)}
+            >
+              {showTermsPreview ? '✖ Hide' : '👁 View'} Standard Terms
+            </button>
+          </div>
 
-    <div style="margin-bottom: 28px;">
-      <label style="display: block; margin-bottom: 10px; color: #2C2C2C; font-size: 15px; font-weight: 600;">
-        Your Email <span style="color: #D4AF37;">*</span>
-      </label>
-      <input type="email" placeholder="you@example.com" class="email-input" />
-      <p style="font-size: 13px; color: #6B6B6B; margin-top: 8px;">
-        Get instant notification when your file is downloaded
-      </p>
-    </div>
+          {/* Terms Preview */}
+          {showTermsPreview && (
+            <div className="terms-preview">
+              <h4>Recipients Must Agree To:</h4>
+              <ul>
+                <li>✓ Personal use only - no commercial exploitation</li>
+                <li>✓ No redistribution or sharing with others</li>
+                <li>✓ No modifications or derivative works</li>
+                <li>✓ No AI/ML training or voice cloning</li>
+                <li>✓ No dataset creation or data mining</li>
+                <li>✓ Copyright remains with the original creator</li>
+                <li>✓ Violation results in legal action</li>
+                <li>✓ Download activity is logged and monitored</li>
+                <li>✓ File access expires after download</li>
+              </ul>
+              <p className="terms-note">
+                <strong>Coming Soon:</strong> Custom terms for Pro users
+              </p>
+            </div>
+          )}
 
-    <button class="upload-btn">
-      🚀 Generate Protected Link
-    </button>
+          {/* Upload Section */}
+          <div className="upload-section">
+            <div className="upload-box">
+              <input
+                type="file"
+                accept="audio/*"
+                onChange={handleFileSelect}
+                id="file-input"
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="file-input" className="file-label">
+                {file ? (
+                  <div className="file-selected">
+                    <div className="file-icon">🎵</div>
+                    <div className="file-details">
+                      <div className="file-name">{file.name}</div>
+                      <div className="file-size">
+                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="file-placeholder">
+                    <div className="upload-icon">☁️</div>
+                    <div className="upload-title">Drop Your Audio File Here</div>
+                    <div className="upload-hint">
+                      or click to browse<br/>
+                      <span className="file-types">MP3, WAV, M4A, FLAC (Max 100MB)</span>
+                    </div>
+                  </div>
+                )}
+              </label>
+            </div>
 
-    <!-- How It Works -->
-    <div class="how-it-works">
-      <h4>How SafeShare Works</h4>
-      <div class="steps">
-        <div class="step">
-          <div class="step-number">1</div>
-          <span class="step-text">Upload your file</span>
+            <div className="email-section">
+              <label htmlFor="email" className="email-label">
+                Your Email <span className="required">*</span>
+              </label>
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="email-input"
+                required
+              />
+              <p className="email-hint">
+                Get instant notification when your file is downloaded
+              </p>
+            </div>
+
+            {error && (
+              <div className="error-message">⚠️ {error}</div>
+            )}
+
+            {file && email && (
+              <button 
+                onClick={handleUpload} 
+                disabled={uploading}
+                className="upload-btn"
+              >
+                {uploading ? (
+                  <span className="btn-content">
+                    <span className="spinner"></span>
+                    Creating Secure Link...
+                  </span>
+                ) : (
+                  <span className="btn-content">
+                    🚀 Generate Protected Link
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* How It Works */}
+            <div className="how-it-works">
+              <h4>How SafeShare Works</h4>
+              <div className="steps">
+                <div className="step">
+                  <div className="step-number">1</div>
+                  <span className="step-text">Upload your file</span>
+                </div>
+                <div className="step-arrow">→</div>
+                <div className="step">
+                  <div className="step-number">2</div>
+                  <span className="step-text">Get secure link</span>
+                </div>
+                <div className="step-arrow">→</div>
+                <div className="step">
+                  <div className="step-number">3</div>
+                  <span className="step-text">Share with clients</span>
+                </div>
+                <div className="step-arrow">→</div>
+                <div className="step">
+                  <div className="step-number">4</div>
+                  <span className="step-text">Protected download</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* Success Section */
+        <div className="success-section">
+          <div className="success-animation">
+            <div className="success-icon">✅</div>
+          </div>
+          <h2>Your Protected Link is Ready!</h2>
+          <p className="success-info">
+            Your file is now legally protected and ready to share
+          </p>
+          
+          <div className="link-section">
+            <label className="link-label">Secure Share Link:</label>
+            <div className="link-box">
+              <input 
+                type="text" 
+                value={shareLink} 
+                readOnly 
+                className="link-input"
+                onClick={(e) => e.target.select()}
+              />
+              <button onClick={copyToClipboard} className="copy-btn">
+                📋 Copy
+              </button>
+            </div>
+          </div>
+
+          <div className="link-features">
+            <div className="link-feature">
+              <span className="check">✓</span> Legal terms protection active
+            </div>
+            <div className="link-feature">
+              <span className="check">✓</span> Download tracking enabled
+            </div>
+            <div className="link-feature">
+              <span className="check">✓</span> Auto-delete after download
+            </div>
+          </div>
+
+          <div className="notification-info">
+            📧 Notification will be sent to: <strong>{email}</strong>
+          </div>
+
+          <button onClick={resetForm} className="new-upload-btn">
+            Share Another File
+          </button>
         </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-          <div class="step-number">2</div>
-          <span class="step-text">Get secure link</span>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-          <div class="step-number">3</div>
-          <span class="step-text">Share with clients</span>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-          <div class="step-number">4</div>
-          <span class="step-text">Protected download</span>
+      )}
+
+      {/* Footer */}
+      <div className="footer">
+        <div className="footer-content">
+          <p className="powered-by">Powered by <strong>Epiphany India</strong></p>
+          <div className="footer-links">
+            <a href="https://www.epiphanyindia.com/vaanisafe" target="_blank" rel="noopener noreferrer">
+              Watermark Audio
+            </a>
+            <span className="separator">•</span>
+            <a href="#" onClick={(e) => {e.preventDefault(); alert('Pro features launching soon!')}}>
+              Go Pro
+            </a>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Footer -->
-  <div class="footer">
-    <p class="powered-by">Powered by <strong>Epiphany India</strong></p>
-    <div class="footer-links">
-      <a href="https://www.epiphanyindia.com/vaanisafe">Watermark Audio</a>
-      <span style="color: #6B6B6B;">•</span>
-      <a href="#">Go Pro</a>
-    </div>
-  </div>
-</div>
-
-</body>
-</html>
+  );
+}
