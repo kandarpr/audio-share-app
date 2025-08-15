@@ -44,13 +44,41 @@ export default function DownloadPage() {
       const data = await response.json();
       
       if (response.ok && data.url) {
-        // Create download link
+        // Fetch the file as blob to control filename
+        const fileResponse = await fetch(data.url);
+        const blob = await fileResponse.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        // Create download link with proper filename
         const link = document.createElement('a');
-        link.href = data.url;
+        link.href = blobUrl;
         link.download = data.filename || 'audio-file';
+        link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
+        // Clean up blob URL
+        setTimeout(() => {
+          window.URL.revokeObjectURL(blobUrl);
+        }, 1000);
+        
+        // Send email notification
+        if (data.email) {
+          try {
+            await fetch('/api/notify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: data.email,
+                filename: data.filename
+              })
+            });
+            console.log('Email notification sent');
+          } catch (error) {
+            console.error('Email notification failed:', error);
+          }
+        }
         
         setDownloadComplete(true);
         
