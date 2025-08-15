@@ -58,8 +58,11 @@ export default async function handler(req, res) {
       }
     }, 30000); // Delete after 30 seconds
 
+    // Force download by adding fl_attachment flag
+    const downloadUrl = fileData.cloudinaryUrl.replace('/upload/', '/upload/fl_attachment/');
+    
     res.status(200).json({ 
-      url: fileData.cloudinaryUrl,
+      url: downloadUrl,
       filename: fileData.filename,
       email: fileData.uploaderEmail
     });
