@@ -41,7 +41,7 @@ export default function Home() {
     setError('');
     
     const formData = new FormData();
-    formData.append('file', file);  // Using 'file' for your backend
+    formData.append('file', file);
     formData.append('email', email);
 
     try {
@@ -79,13 +79,11 @@ export default function Home() {
 
   return (
     <div className="container">
-      {/* Logo Section with Image */}
       <div className="logo-section">
         <img src="/safeshare-logo.png" alt="SafeShare" className="logo-image" />
         <p className="subtitle">Secure File Sharing with Legal Protection</p>
       </div>
 
-      {/* New User Guide Section */}
       {!shareLink && (
         <div className="info-section">
           <h3>Protect Your Creative Work</h3>
@@ -95,36 +93,34 @@ export default function Home() {
           </p>
           <div className="features-grid">
             <div className="feature">
-              <div className="feature-icon">🛡️</div>
+              <div className="feature-icon">[Shield]</div>
               <span className="feature-text">Terms Protected</span>
             </div>
             <div className="feature">
-              <div className="feature-icon">📧</div>
+              <div className="feature-icon">[Email]</div>
               <span className="feature-text">Download Alerts</span>
             </div>
             <div className="feature">
-              <div className="feature-icon">🗑️</div>
+              <div className="feature-icon">[Delete]</div>
               <span className="feature-text">Auto-Delete</span>
             </div>
             <div className="feature">
-              <div className="feature-icon">🔗</div>
+              <div className="feature-icon">[Link]</div>
               <span className="feature-text">Short Links</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Terms Preview Button */}
       <div className="terms-preview-section">
         <button 
           className="terms-preview-btn"
           onClick={() => setShowTermsPreview(!showTermsPreview)}
         >
-          {showTermsPreview ? '✕ Hide' : '📜 View'} Standard Terms
+          {showTermsPreview ? 'Hide' : 'View'} Standard Terms
         </button>
       </div>
 
-      {/* Terms Preview Modal */}
       {showTermsPreview && (
         <div className="terms-preview">
           <h4>Recipients Must Agree To:</h4>
@@ -158,7 +154,7 @@ export default function Home() {
             <label htmlFor="file-input" className="file-label">
               {file ? (
                 <div className="file-selected">
-                  <div className="file-icon">🎵</div>
+                  <div className="file-icon">[Music]</div>
                   <div className="file-details">
                     <div className="file-name">{file.name}</div>
                     <div className="file-size">
@@ -168,7 +164,7 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="file-placeholder">
-                  <div className="upload-icon">☁️</div>
+                  <div className="upload-icon">[Cloud]</div>
                   <div className="upload-title">Drop Your Audio File Here</div>
                   <div className="upload-hint">
                     or click to browse<br/>
@@ -198,7 +194,7 @@ export default function Home() {
           </div>
 
           {error && (
-            <div className="error-message">⚠️ {error}</div>
+            <div className="error-message">Warning: {error}</div>
           )}
 
           {file && email && (
@@ -214,13 +210,12 @@ export default function Home() {
                 </span>
               ) : (
                 <span className="btn-content">
-                  🚀 Generate Protected Link
+                  [Rocket] Generate Protected Link
                 </span>
               )}
             </button>
           )}
 
-          {/* How It Works */}
           <div className="how-it-works">
             <h4>How SafeShare Works</h4>
             <div className="steps">
@@ -249,7 +244,7 @@ export default function Home() {
       ) : (
         <div className="success-section">
           <div className="success-animation">
-            <div className="success-icon">✅</div>
+            <div className="success-icon">[Success]</div>
           </div>
           <h2>Your Protected Link is Ready!</h2>
           <p className="success-info">
@@ -267,7 +262,7 @@ export default function Home() {
                 onClick={(e) => e.target.select()}
               />
               <button onClick={copyToClipboard} className="copy-btn">
-                📋 Copy
+                [Copy] Copy
               </button>
             </div>
           </div>
@@ -285,7 +280,7 @@ export default function Home() {
           </div>
 
           <div className="notification-info">
-            📧 Notification will be sent to: <strong>{email}</strong>
+            Email Notification will be sent to: <strong>{email}</strong>
           </div>
 
           <button onClick={resetForm} className="new-upload-btn">
@@ -294,7 +289,6 @@ export default function Home() {
         </div>
       )}
       
-      {/* Footer */}
       <div className="footer">
         <div className="footer-content">
           <p className="powered-by">Powered by <strong>Epiphany India</strong></p>
