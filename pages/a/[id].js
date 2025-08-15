@@ -140,6 +140,9 @@ export default function DownloadPage() {
   };
 
   return (
+<div className="logo-section">
+  <img src="/safeshare-logo.png" alt="SafeShare" className="logo-image" />
+</div>
     <div className="container">
       {showTerms && !termsAccepted && (
         <TermsModal 

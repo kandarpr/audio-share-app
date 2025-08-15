@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import axios from 'axios';
 
 export default function Home() {
   const [file, setFile] = useState(null);
@@ -7,6 +6,7 @@ export default function Home() {
   const [uploading, setUploading] = useState(false);
   const [shareLink, setShareLink] = useState('');
   const [error, setError] = useState('');
+  const [showTermsPreview, setShowTermsPreview] = useState(false);
 
   const handleFileSelect = (e) => {
     const selectedFile = e.target.files[0];
@@ -41,17 +41,23 @@ export default function Home() {
     setError('');
     
     const formData = new FormData();
-    formData.append('audio', file);
+    formData.append('file', file);  // Using 'file' for your backend
     formData.append('email', email);
-    formData.append('filename', file.name);
 
     try {
-      const response = await axios.post('/api/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
       });
+
+      const data = await response.json();
       
-      const link = `${window.location.origin}/a/${response.data.shortId}`;
-      setShareLink(link);
+      if (data.success) {
+        const link = `${window.location.origin}/a/${data.code}`;
+        setShareLink(link);
+      } else {
+        setError('Upload failed. Please try again.');
+      }
     } catch (error) {
       setError('Upload failed. Please try again.');
       console.error(error);
@@ -73,8 +79,71 @@ export default function Home() {
 
   return (
     <div className="container">
-      <h1>🎵 Secure Audio Sharing</h1>
-      <p className="subtitle">Share audio files with terms protection</p>
+      {/* Logo Section with Image */}
+      <div className="logo-section">
+        <img src="/safeshare-logo.png" alt="SafeShare" className="logo-image" />
+        <p className="subtitle">Secure File Sharing with Legal Protection</p>
+      </div>
+
+      {/* New User Guide Section */}
+      {!shareLink && (
+        <div className="info-section">
+          <h3>Protect Your Creative Work</h3>
+          <p>
+            Share your audio files securely with automatic legal protection. 
+            Recipients must accept binding terms before downloading.
+          </p>
+          <div className="features-grid">
+            <div className="feature">
+              <div className="feature-icon">🛡️</div>
+              <span className="feature-text">Terms Protected</span>
+            </div>
+            <div className="feature">
+              <div className="feature-icon">📧</div>
+              <span className="feature-text">Download Alerts</span>
+            </div>
+            <div className="feature">
+              <div className="feature-icon">🗑️</div>
+              <span className="feature-text">Auto-Delete</span>
+            </div>
+            <div className="feature">
+              <div className="feature-icon">🔗</div>
+              <span className="feature-text">Short Links</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Terms Preview Button */}
+      <div className="terms-preview-section">
+        <button 
+          className="terms-preview-btn"
+          onClick={() => setShowTermsPreview(!showTermsPreview)}
+        >
+          {showTermsPreview ? '✕ Hide' : '📜 View'} Standard Terms
+        </button>
+      </div>
+
+      {/* Terms Preview Modal */}
+      {showTermsPreview && (
+        <div className="terms-preview">
+          <h4>Recipients Must Agree To:</h4>
+          <ul>
+            <li>✓ Personal use only - no commercial exploitation</li>
+            <li>✓ No redistribution or sharing with others</li>
+            <li>✓ No modifications or derivative works</li>
+            <li>✓ No AI/ML training or voice cloning</li>
+            <li>✓ No dataset creation or data mining</li>
+            <li>✓ Copyright remains with the original creator</li>
+            <li>✓ Violation results in legal action</li>
+            <li>✓ Download activity is logged and monitored</li>
+            <li>✓ File access expires after download</li>
+          </ul>
+          <p className="terms-note">
+            <strong>Coming Soon:</strong> Custom terms for Pro users
+          </p>
+        </div>
+      )}
       
       {!shareLink ? (
         <div className="upload-section">
@@ -88,18 +157,23 @@ export default function Home() {
             />
             <label htmlFor="file-input" className="file-label">
               {file ? (
-                <div>
-                  <div className="file-icon">📁</div>
-                  <div className="file-name">{file.name}</div>
-                  <div className="file-size">
-                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                <div className="file-selected">
+                  <div className="file-icon">🎵</div>
+                  <div className="file-details">
+                    <div className="file-name">{file.name}</div>
+                    <div className="file-size">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div>
-                  <div className="upload-icon">📂</div>
-                  <div>Choose Audio File</div>
-                  <div className="upload-hint">Max 100MB • MP3, WAV, etc.</div>
+                <div className="file-placeholder">
+                  <div className="upload-icon">☁️</div>
+                  <div className="upload-title">Drop Your Audio File Here</div>
+                  <div className="upload-hint">
+                    or click to browse<br/>
+                    <span className="file-types">MP3, WAV, M4A, FLAC (Max 100MB)</span>
+                  </div>
                 </div>
               )}
             </label>
@@ -107,17 +181,20 @@ export default function Home() {
 
           <div className="email-section">
             <label htmlFor="email" className="email-label">
-              Your Email (for download notifications):
+              Your Email <span className="required">*</span>
             </label>
             <input
               type="email"
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
+              placeholder="you@example.com"
               className="email-input"
               required
             />
+            <p className="email-hint">
+              Get instant notification when your file is downloaded
+            </p>
           </div>
 
           {error && (
@@ -131,23 +208,56 @@ export default function Home() {
               className="upload-btn"
             >
               {uploading ? (
-                <span>⏳ Uploading... Please wait</span>
+                <span className="btn-content">
+                  <span className="spinner"></span>
+                  Creating Secure Link...
+                </span>
               ) : (
-                <span>🚀 Upload & Generate Link</span>
+                <span className="btn-content">
+                  🚀 Generate Protected Link
+                </span>
               )}
             </button>
           )}
+
+          {/* How It Works */}
+          <div className="how-it-works">
+            <h4>How SafeShare Works</h4>
+            <div className="steps">
+              <div className="step">
+                <div className="step-number">1</div>
+                <span className="step-text">Upload your file</span>
+              </div>
+              <div className="step-arrow">→</div>
+              <div className="step">
+                <div className="step-number">2</div>
+                <span className="step-text">Get secure link</span>
+              </div>
+              <div className="step-arrow">→</div>
+              <div className="step">
+                <div className="step-number">3</div>
+                <span className="step-text">Share with clients</span>
+              </div>
+              <div className="step-arrow">→</div>
+              <div className="step">
+                <div className="step-number">4</div>
+                <span className="step-text">Protected download</span>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="success-section">
-          <div className="success-icon">✅</div>
-          <h2>Upload Successful!</h2>
+          <div className="success-animation">
+            <div className="success-icon">✅</div>
+          </div>
+          <h2>Your Protected Link is Ready!</h2>
           <p className="success-info">
-            Your file will be deleted after download or in 7 days
+            Your file is now legally protected and ready to share
           </p>
           
           <div className="link-section">
-            <label className="link-label">Share this short link:</label>
+            <label className="link-label">Secure Share Link:</label>
             <div className="link-box">
               <input 
                 type="text" 
@@ -162,15 +272,43 @@ export default function Home() {
             </div>
           </div>
 
+          <div className="link-features">
+            <div className="link-feature">
+              <span className="check">✓</span> Legal terms protection active
+            </div>
+            <div className="link-feature">
+              <span className="check">✓</span> Download tracking enabled
+            </div>
+            <div className="link-feature">
+              <span className="check">✓</span> Auto-delete after download
+            </div>
+          </div>
+
           <div className="notification-info">
-            📧 You'll receive an email at <strong>{email}</strong> when someone downloads your file
+            📧 Notification will be sent to: <strong>{email}</strong>
           </div>
 
           <button onClick={resetForm} className="new-upload-btn">
-            Upload Another File
+            Share Another File
           </button>
         </div>
       )}
+      
+      {/* Footer */}
+      <div className="footer">
+        <div className="footer-content">
+          <p className="powered-by">Powered by <strong>Epiphany India</strong></p>
+          <div className="footer-links">
+            <a href="https://www.epiphanyindia.com/vaanisafe" target="_blank" rel="noopener noreferrer">
+              Watermark Audio
+            </a>
+            <span className="separator">•</span>
+            <a href="#" onClick={(e) => {e.preventDefault(); alert('Pro features launching soon!')}}>
+              Go Pro
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
